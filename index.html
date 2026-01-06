@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amada Travels - Ticketing & Invoice System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f3f4f6;
+        }
+        
+        /* Barcode Font for realism */
+        .barcode {
+            font-family: 'Libre Barcode 39 Text', cursive;
+            font-size: 48px;
+            font-weight: normal;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Print Styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .printable-area, .printable-area * {
+                visibility: visible;
+            }
+            .printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+            .no-print {
+                display: none !important;
+            }
+            /* Ensure background colors print */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        .ticket-cutout {
+            position: relative;
+        }
+        .ticket-cutout::after {
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background-color: #f3f4f6; /* Match body bg */
+            border-radius: 50%;
+            box-shadow: inset 2px 0 3px rgba(0,0,0,0.1);
+        }
+        .ticket-cutout::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background-color: #f3f4f6;
+            border-radius: 50%;
+            box-shadow: inset -2px 0 3px rgba(0,0,0,0.1);
+        }
+
+        .dashed-line {
+            background-image: linear-gradient(to bottom, #d1d5db 50%, transparent 50%);
+            background-size: 2px 20px;
+            background-repeat: repeat-y;
+        }
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- SIDEBAR / INPUT FORM -->
+    <div class="w-full md:w-1/3 bg-white border-r border-gray-200 flex flex-col h-full z-10 shadow-lg no-print overflow-y-auto">
+        <div class="p-6 bg-blue-900 text-white">
+            <div class="flex items-center gap-3 mb-2">
+                <i class="fas fa-plane-departure text-2xl text-yellow-400"></i>
+                <h1 class="text-2xl font-bold tracking-wider">AMADA TRAVELS</h1>
+            </div>
+            <p class="text-blue-200 text-sm">Ticketing & Invoice Generator</p>
+        </div>
+
+        <div class="p-6 space-y-4 flex-grow">
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Passenger Name</label>
+                <input type="text" id="pName" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent transition-colors" placeholder="e.g. John Doe" value="ALEXANDRA REYNOLDS">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Departure (From)</label>
+                    <input type="text" id="fromCity" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent uppercase" value="ABUJA (ABV)">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Destination (To)</label>
+                    <input type="text" id="toCity" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent uppercase" value="LONDON (LHR)">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                    <input type="date" id="date" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Time</label>
+                    <input type="time" id="time" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent" value="14:30">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Flight</label>
+                    <input type="text" id="flightNum" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent uppercase" value="AM-402">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Seat</label>
+                    <input type="text" id="seatNum" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent uppercase" value="4A">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Class</label>
+                    <select id="classType" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent">
+                        <option value="First">First</option>
+                        <option value="Business" selected>Business</option>
+                        <option value="Economy">Economy</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 pt-4">
+                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Ticket Price ($)</label>
+                <input type="number" id="price" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent" value="1250.00">
+            </div>
+
+            <button onclick="updatePreview()" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3 rounded-lg shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 mt-4">
+                <i class="fas fa-sync-alt mr-2"></i> Update Preview
+            </button>
+             <button onclick="printCurrentView()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 rounded-lg shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 mt-2">
+                <i class="fas fa-print mr-2"></i> Print Document
+            </button>
+        </div>
+        
+        <div class="p-4 bg-gray-50 text-xs text-gray-400 text-center">
+            &copy; 2026 Amada Travels System
+        </div>
+    </div>
+
+    <!-- PREVIEW AREA -->
+    <div class="w-full md:w-2/3 h-full overflow-y-auto bg-gray-100 relative">
+        <!-- Tabs -->
+        <div class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 flex justify-center gap-4 no-print">
+            <button onclick="switchTab('boarding')" id="tab-boarding" class="px-4 py-2 rounded-full text-sm font-semibold bg-blue-900 text-white shadow-md transition-all">Boarding Pass</button>
+            <button onclick="switchTab('invoice')" id="tab-invoice" class="px-4 py-2 rounded-full text-sm font-semibold bg-white text-gray-600 hover:bg-gray-100 transition-all">Invoice</button>
+            <button onclick="switchTab('ticket')" id="tab-ticket" class="px-4 py-2 rounded-full text-sm font-semibold bg-white text-gray-600 hover:bg-gray-100 transition-all">E-Ticket</button>
+        </div>
+
+        <div class="p-8 pb-20 flex justify-center items-start min-h-full">
+            
+            <!-- BOARDING PASS VIEW -->
+            <div id="view-boarding" class="printable-area w-full max-w-3xl transform transition-all duration-300">
+                <div class="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row w-full relative">
+                    <!-- Left Side (Main) -->
+                    <div class="w-full md:w-3/4 p-6 md:p-8 relative bg-gradient-to-br from-blue-900 to-blue-800 text-white">
+                        <div class="flex justify-between items-center mb-8">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-plane-departure text-3xl text-yellow-400"></i>
+                                <span class="font-bold tracking-widest text-lg">AMADA TRAVELS</span>
+                            </div>
+                            <span class="text-blue-200 font-mono tracking-widest">BOARDING PASS</span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-8 mb-8">
+                            <div>
+                                <p class="text-xs text-blue-300 uppercase mb-1">Passenger</p>
+                                <p class="font-bold text-lg truncate dynamic-name">Alexandra Reynolds</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-300 uppercase mb-1">Flight</p>
+                                <p class="font-bold text-lg dynamic-flight">AM-402</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-300 uppercase mb-1">Class</p>
+                                <p class="font-bold text-lg dynamic-class">Business</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between mb-8">
+                            <div class="text-center">
+                                <p class="text-4xl font-bold dynamic-from-code">ABV</p>
+                                <p class="text-xs text-blue-300 mt-1 dynamic-from-city">Abuja</p>
+                            </div>
+                            <div class="flex-grow px-8 flex flex-col items-center">
+                                <div class="flex items-center w-full gap-2">
+                                    <div class="h-[2px] bg-blue-400 flex-grow"></div>
+                                    <i class="fas fa-plane text-yellow-400 transform rotate-90"></i>
+                                    <div class="h-[2px] bg-blue-400 flex-grow"></div>
+                                </div>
+                                <p class="text-xs text-blue-300 mt-2 dynamic-duration">6h 30m</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-4xl font-bold dynamic-to-code">LHR</p>
+                                <p class="text-xs text-blue-300 mt-1 dynamic-to-city">London</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-4 gap-4">
+                            <div>
+                                <p class="text-xs text-blue-300 uppercase mb-1">Date</p>
+                                <p class="font-semibold dynamic-date">12 OCT</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-300 uppercase mb-1">Boarding</p>
+                                <p class="font-semibold dynamic-boarding-time">13:45</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-300 uppercase mb-1">Gate</p>
+                                <p class="font-semibold">A12</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-blue-300 uppercase mb-1">Seat</p>
+                                <p class="font-bold text-2xl text-yellow-400 dynamic-seat">4A</p>
+                            </div>
+                        </div>
+
+                        <!-- Perforated Line Decoration for visual only on mobile -->
+                        <div class="absolute right-0 top-0 bottom-0 w-px bg-blue-900 border-r-2 border-dashed border-blue-500/30 hidden md:block"></div>
+                    </div>
+
+                    <!-- Right Side (Stub) -->
+                    <div class="w-full md:w-1/4 bg-white p-6 flex flex-col justify-between border-l-2 border-dashed border-gray-300 relative">
+                         <!-- Cutout Circles -->
+                        <div class="absolute -top-3 -left-3 w-6 h-6 bg-[#f3f4f6] rounded-full z-10 hidden md:block"></div>
+                        <div class="absolute -bottom-3 -left-3 w-6 h-6 bg-[#f3f4f6] rounded-full z-10 hidden md:block"></div>
+
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <i class="fas fa-plane-departure text-blue-900 text-xl"></i>
+                                <span class="font-bold text-blue-900 text-sm">AMADA</span>
+                            </div>
+                            <div class="space-y-3">
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase">Passenger</p>
+                                    <p class="font-bold text-sm text-gray-800 truncate dynamic-name">Alexandra</p>
+                                </div>
+                                <div class="flex justify-between">
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase">From</p>
+                                        <p class="font-bold text-lg text-gray-800 dynamic-from-code">ABV</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-[10px] text-gray-400 uppercase">To</p>
+                                        <p class="font-bold text-lg text-gray-800 dynamic-to-code">LHR</p>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between">
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase">Flight</p>
+                                        <p class="font-bold text-sm text-gray-800 dynamic-flight">AM-402</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-[10px] text-gray-400 uppercase">Seat</p>
+                                        <p class="font-bold text-lg text-blue-900 dynamic-seat">4A</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 flex flex-col items-center justify-center">
+                            <div class="barcode text-gray-800 transform scale-x-110 origin-center text-3xl">
+                                *AM4024A*
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INVOICE VIEW -->
+            <div id="view-invoice" class="printable-area w-full max-w-3xl hidden">
+                <div class="bg-white p-12 shadow-2xl relative min-h-[800px]">
+                    <!-- Header -->
+                    <div class="flex justify-between items-start mb-12 border-b-2 border-gray-100 pb-8">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-plane-departure text-3xl text-blue-900"></i>
+                                <span class="font-bold text-2xl text-blue-900 tracking-wider">AMADA TRAVELS</span>
+                            </div>
+                            <p class="text-gray-500 text-sm">123 Aviation Way, Sky Tower</p>
+                            <p class="text-gray-500 text-sm">Abuja, Nigeria 90001</p>
+                            <p class="text-gray-500 text-sm">support@amadatravels.com</p>
+                        </div>
+                        <div class="text-right">
+                            <h2 class="text-4xl font-light text-gray-300 uppercase">Invoice</h2>
+                            <p class="text-gray-600 mt-2 font-mono">#INV-<span id="inv-num">2024-001</span></p>
+                            <p class="text-gray-500 text-sm mt-1">Date: <span id="inv-date">Oct 12, 2026</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Bill To -->
+                    <div class="mb-12">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Billed To:</h3>
+                        <p class="text-xl font-bold text-gray-800 dynamic-name">Alexandra Reynolds</p>
+                        <p class="text-gray-600 dynamic-class">Business Class Passenger</p>
+                        <p class="text-gray-600 text-sm mt-1">Traveler ID: <span class="font-mono">AM-88392</span></p>
+                    </div>
+
+                    <!-- Table -->
+                    <table class="w-full mb-12">
+                        <thead>
+                            <tr class="bg-blue-50">
+                                <th class="py-3 px-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Description</th>
+                                <th class="py-3 px-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Qty</th>
+                                <th class="py-3 px-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Unit Price</th>
+                                <th class="py-3 px-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            <tr>
+                                <td class="py-4 px-4">
+                                    <p class="font-bold text-gray-800">Air Fare - <span class="dynamic-class">Business</span></p>
+                                    <p class="text-sm text-gray-500">Flight <span class="dynamic-flight">AM-402</span> | <span class="dynamic-from-code">ABV</span> to <span class="dynamic-to-code">LHR</span></p>
+                                    <p class="text-xs text-gray-400 mt-1">Date: <span class="dynamic-date">Oct 12</span></p>
+                                </td>
+                                <td class="py-4 px-4 text-center text-gray-600">1</td>
+                                <td class="py-4 px-4 text-right text-gray-600 dynamic-price-unit">$1250.00</td>
+                                <td class="py-4 px-4 text-right font-bold text-gray-800 dynamic-price-total">$1250.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-4 px-4">
+                                    <p class="font-bold text-gray-800">Airport Taxes & Fees</p>
+                                    <p class="text-sm text-gray-500">International Departure Tax</p>
+                                </td>
+                                <td class="py-4 px-4 text-center text-gray-600">1</td>
+                                <td class="py-4 px-4 text-right text-gray-600 dynamic-tax">$150.00</td>
+                                <td class="py-4 px-4 text-right font-bold text-gray-800 dynamic-tax">$150.00</td>
+                            </tr>
+                            <tr>
+                                <td class="py-4 px-4">
+                                    <p class="font-bold text-gray-800">Baggage Fee</p>
+                                    <p class="text-sm text-gray-500">2 Checked Bags included</p>
+                                </td>
+                                <td class="py-4 px-4 text-center text-gray-600">2</td>
+                                <td class="py-4 px-4 text-right text-gray-600">$0.00</td>
+                                <td class="py-4 px-4 text-right font-bold text-gray-800">$0.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Totals -->
+                    <div class="flex justify-end mb-12">
+                        <div class="w-64">
+                            <div class="flex justify-between py-2 border-b border-gray-100 text-gray-600">
+                                <span>Subtotal</span>
+                                <span class="font-mono dynamic-subtotal">$1400.00</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-gray-100 text-gray-600">
+                                <span>Tax (Included)</span>
+                                <span class="font-mono text-xs">(0%)</span>
+                            </div>
+                            <div class="flex justify-between py-4 text-blue-900 font-bold text-xl">
+                                <span>Total Due</span>
+                                <span class="dynamic-grand-total">$1400.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="absolute bottom-0 left-0 right-0 p-12 bg-gray-50 border-t border-gray-200">
+                        <p class="text-center text-gray-500 text-sm">Thank you for flying with Amada Travels.</p>
+                        <p class="text-center text-xs text-gray-400 mt-1">Terms & Conditions apply. This is a computer generated invoice.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- E-TICKET VIEW -->
+            <div id="view-ticket" class="printable-area w-full max-w-xl hidden">
+                <div class="bg-white shadow-2xl overflow-hidden">
+                    <div class="bg-blue-900 p-6 text-center">
+                        <i class="fas fa-check-circle text-4xl text-green-400 mb-2"></i>
+                        <h2 class="text-white font-bold text-xl">Booking Confirmed</h2>
+                        <p class="text-blue-200 text-sm">Reference: <span class="text-white font-mono">XJ9-22L</span></p>
+                    </div>
+                    
+                    <div class="p-8">
+                        <div class="border-b border-gray-200 pb-6 mb-6">
+                            <h3 class="text-gray-500 text-xs font-bold uppercase mb-4">Itinerary Details</h3>
+                            <div class="flex items-center justify-between">
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-gray-800 dynamic-from-code">ABV</div>
+                                    <div class="text-sm text-gray-500 dynamic-from-city">Abuja</div>
+                                    <div class="text-xs text-gray-400 mt-1 dynamic-dep-time">14:30</div>
+                                </div>
+                                <div class="flex-grow px-4 flex flex-col items-center">
+                                    <div class="text-xs text-gray-400 mb-1 dynamic-duration">6h 30m</div>
+                                    <div class="w-full h-px bg-gray-300 relative">
+                                        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2">
+                                            <i class="fas fa-plane text-blue-500"></i>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-green-600 mt-1 font-bold">Non-stop</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold text-gray-800 dynamic-to-code">LHR</div>
+                                    <div class="text-sm text-gray-500 dynamic-to-city">London</div>
+                                    <div class="text-xs text-gray-400 mt-1 dynamic-arr-time">21:00</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-y-6 gap-x-4 mb-8">
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase">Passenger</p>
+                                <p class="font-semibold text-gray-800 dynamic-name">Alexandra Reynolds</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase">Flight Number</p>
+                                <p class="font-semibold text-gray-800 dynamic-flight">AM-402</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase">Date</p>
+                                <p class="font-semibold text-gray-800 dynamic-date">Oct 12, 2026</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-400 uppercase">Seat Assignment</p>
+                                <p class="font-semibold text-gray-800 dynamic-seat">4A</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-600">Ticket Fare</span>
+                                <span class="text-sm font-bold text-gray-800 dynamic-price-unit">$1250.00</span>
+                            </div>
+                             <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm text-gray-600">Taxes</span>
+                                <span class="text-sm font-bold text-gray-800 dynamic-tax">$150.00</span>
+                            </div>
+                            <div class="border-t border-gray-200 pt-2 mt-2 flex justify-between items-center">
+                                <span class="font-bold text-blue-900">Total Paid</span>
+                                <span class="font-bold text-blue-900 text-lg dynamic-grand-total">$1400.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Set default date to today
+        document.getElementById('date').valueAsDate = new Date();
+
+        function updatePreview() {
+            // Get values
+            const name = document.getElementById('pName').value || 'John Doe';
+            const fromRaw = document.getElementById('fromCity').value || 'Abuja';
+            const toRaw = document.getElementById('toCity').value || 'London';
+            const date = new Date(document.getElementById('date').value);
+            const time = document.getElementById('time').value || '12:00';
+            const flight = document.getElementById('flightNum').value || 'AM-001';
+            const seat = document.getElementById('seatNum').value || '1A';
+            const travelClass = document.getElementById('classType').value;
+            const price = parseFloat(document.getElementById('price').value) || 0;
+
+            // Process text for codes (First 3 letters or parenthesis content)
+            const getCode = (str) => {
+                const match = str.match(/\(([^)]+)\)/);
+                return match ? match[1].toUpperCase() : str.substring(0,3).toUpperCase();
+            };
+            const getCity = (str) => {
+                return str.split('(')[0].trim();
+            }
+
+            const fromCode = getCode(fromRaw);
+            const fromCity = getCity(fromRaw);
+            const toCode = getCode(toRaw);
+            const toCity = getCity(toRaw);
+
+            // Date Formatting
+            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            const dateStr = `${date.getDate()} ${months[date.getMonth()]}`;
+            const fullDateStr = `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+
+            // Time Math (Duration and Arrival) - Simulated
+            // Assume 6.5 hours duration roughly
+            const [hrs, mins] = time.split(':').map(Number);
+            const boardingMins = (hrs * 60 + mins) - 45; // 45 mins before
+            const bHrs = Math.floor(boardingMins / 60);
+            const bMins = boardingMins % 60;
+            const boardingTime = `${String(bHrs).padStart(2,'0')}:${String(bMins).padStart(2,'0')}`;
+            
+            // Arrival (add 6h 30m)
+            let arrMins = (hrs * 60 + mins) + (6 * 60 + 30);
+            const aHrs = Math.floor(arrMins / 60) % 24;
+            const aMins = arrMins % 60;
+            const arrTime = `${String(aHrs).padStart(2,'0')}:${String(aMins).padStart(2,'0')}`;
+
+            // Invoice Calcs
+            const tax = price * 0.12; // 12% tax assumption
+            const total = price + tax;
+
+            // Update DOM Elements by Class (to update all views at once)
+            document.querySelectorAll('.dynamic-name').forEach(el => el.innerText = name);
+            document.querySelectorAll('.dynamic-from-code').forEach(el => el.innerText = fromCode);
+            document.querySelectorAll('.dynamic-from-city').forEach(el => el.innerText = fromCity);
+            document.querySelectorAll('.dynamic-to-code').forEach(el => el.innerText = toCode);
+            document.querySelectorAll('.dynamic-to-city').forEach(el => el.innerText = toCity);
+            document.querySelectorAll('.dynamic-flight').forEach(el => el.innerText = flight);
+            document.querySelectorAll('.dynamic-class').forEach(el => el.innerText = travelClass);
+            document.querySelectorAll('.dynamic-seat').forEach(el => el.innerText = seat);
+            document.querySelectorAll('.dynamic-date').forEach(el => el.innerText = dateStr);
+            document.querySelectorAll('.dynamic-boarding-time').forEach(el => el.innerText = boardingTime);
+            document.querySelectorAll('.dynamic-dep-time').forEach(el => el.innerText = time);
+            document.querySelectorAll('.dynamic-arr-time').forEach(el => el.innerText = arrTime);
+
+            // Money
+            document.querySelectorAll('.dynamic-price-unit').forEach(el => el.innerText = '$' + price.toFixed(2));
+            document.querySelectorAll('.dynamic-price-total').forEach(el => el.innerText = '$' + price.toFixed(2));
+            document.querySelectorAll('.dynamic-tax').forEach(el => el.innerText = '$' + tax.toFixed(2));
+            document.querySelectorAll('.dynamic-subtotal').forEach(el => el.innerText = '$' + total.toFixed(2)); // Subtotal on this invoice layout effectively acts as total before taxes shown below, or similiar. Adjusted logic:
+            
+            // Correction for Invoice Logic display
+            // Line 1: Price
+            // Line 2: Tax (let's say tax is extra)
+            // Subtotal = Price + Tax
+            document.querySelectorAll('.dynamic-subtotal').forEach(el => el.innerText = '$' + (price + tax).toFixed(2));
+            document.querySelectorAll('.dynamic-grand-total').forEach(el => el.innerText = '$' + (price + tax).toFixed(2));
+
+            document.getElementById('inv-date').innerText = fullDateStr;
+        }
+
+        function switchTab(tabName) {
+            // Hide all
+            ['boarding', 'invoice', 'ticket'].forEach(t => {
+                document.getElementById('view-' + t).classList.add('hidden');
+                const btn = document.getElementById('tab-' + t);
+                btn.classList.remove('bg-blue-900', 'text-white');
+                btn.classList.add('bg-white', 'text-gray-600');
+            });
+
+            // Show selected
+            document.getElementById('view-' + tabName).classList.remove('hidden');
+            const activeBtn = document.getElementById('tab-' + tabName);
+            activeBtn.classList.remove('bg-white', 'text-gray-600');
+            activeBtn.classList.add('bg-blue-900', 'text-white');
+        }
+
+        function printCurrentView() {
+            window.print();
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', updatePreview);
+    </script>
+</body>
+</html>

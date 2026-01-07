@@ -461,9 +461,39 @@
                             </tbody>
                         </table>
 
-                        <!-- Totals -->
-                        <div class="flex justify-end mb-auto relative z-10">
-                            <div class="w-72 bg-blue-50/50 p-6 rounded-xl border border-blue-100 backdrop-blur-sm">
+                        <!-- Payment & Totals Section -->
+                        <div class="flex flex-col md:flex-row justify-between items-start mb-auto relative z-10 gap-8">
+                            
+                            <!-- Bank Details (New) -->
+                            <div class="w-full md:w-1/2 bg-slate-50 p-6 rounded-xl border border-slate-200/60">
+                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-4"><i class="fas fa-university mr-1"></i> Payment Details</h4>
+                                <div class="space-y-2 text-xs text-slate-600">
+                                    <div class="flex justify-between border-b border-dashed border-slate-200 pb-1">
+                                        <span class="text-slate-400">Bank Name</span>
+                                        <span class="font-bold text-slate-800 font-mono">Stanbic IBTC</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-dashed border-slate-200 pb-1">
+                                        <span class="text-slate-400">Account Name</span>
+                                        <span class="font-bold text-slate-800 font-mono">Amada Travels</span>
+                                    </div>
+                                    <div class="flex justify-between border-b border-dashed border-slate-200 pb-1">
+                                        <span class="text-slate-400">Account Number</span>
+                                        <span class="font-bold text-blue-700 font-mono text-sm">5770401490</span>
+                                    </div>
+                                    <div class="flex justify-between pb-1">
+                                        <span class="text-slate-400">Currency</span>
+                                        <span class="font-bold text-slate-800 font-mono">NGN</span>
+                                    </div>
+                                </div>
+                                <div class="mt-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                    <p class="text-[10px] text-blue-800 font-bold uppercase mb-1">Transfer Instruction</p>
+                                    <p class="text-xs text-slate-600 mb-1">Total Amount ($) x 1,495</p>
+                                    <p class="text-sm font-bold text-blue-900 dynamic-ngn-total">≈ NGN 0.00</p>
+                                </div>
+                            </div>
+
+                            <!-- Totals -->
+                            <div class="w-full md:w-5/12 bg-blue-50/50 p-6 rounded-xl border border-blue-100 backdrop-blur-sm">
                                 <div class="flex justify-between py-2 text-slate-500 text-sm">
                                     <span>Subtotal</span>
                                     <span class="font-mono font-medium dynamic-subtotal">$205.00</span>
@@ -857,6 +887,12 @@
             let singleTaxTotal = taxes.reduce((acc, t) => acc + t.val, 0);
             const singleGrandTotal = currentFlightData.price + singleTaxTotal;
             const totalDue = singleGrandTotal * paxCount;
+
+             // NGN Conversion
+            const rate = 1495;
+            const totalNGN = totalDue * rate;
+            const ngnStr = totalNGN.toLocaleString('en-NG', { style: 'currency', currency: 'NGN' });
+            setText('dynamic-ngn-total', `≈ ${ngnStr}`);
             
             // Date Formatting
             const dateObj = new Date(currentFlightData.date);

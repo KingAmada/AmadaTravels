@@ -876,6 +876,9 @@
             const rate = 1495;
             const serviceUSD = serviceNGN / rate;
             
+            // VAT Calculation (7.5% on Service Charge)
+            const vatUSD = serviceUSD * 0.075;
+            
             // Get Passengers
             const passengers = getPassengerNames();
             const primaryName = passengers[0];
@@ -888,28 +891,12 @@
             }
 
             // Calculations
-            // NOTE: Taxes scale with price, fees are fixed per passenger usually.
-            // For simplicity based on previous prompt:
-            // % Taxes are calculated on base fare.
-            // Fixed fees are per ticket.
-            // We multiply EVERYTHING by paxCount for the invoice total.
+            // Base total
+            const baseTotal = currentFlightData.price * paxCount;
             
-            const taxes = [
-                { desc: "Transportation International/Domestic Tax - United States", val: currentFlightData.price * 0.075 },
-                { desc: "Harmonized Sales Tax - Canada - 100092287 RT0001", val: currentFlightData.price * 0.13 },
-                { desc: "Airport Improvement Fee Deposit - Canada", val: 28.70 },
-                { desc: "Flight Segment Tax - United States", val: 10.60 },
-                // Add 7.5% Tax (VAT) on Base Fare
-                { desc: "VAT (7.5%)", val: currentFlightData.price * 0.075 }
-            ];
-            
-            let singleTaxTotal = taxes.reduce((acc, t) => acc + t.val, 0);
-            const singleGrandTotal = currentFlightData.price + singleTaxTotal;
-            const totalDueBeforeExtras = singleGrandTotal * paxCount;
-
             // Final Grand Total (USD)
-            // (Base + Taxes) * Pax + Service Charge (USD) - Discount (USD)
-            const grandTotalUSD = totalDueBeforeExtras + serviceUSD - discount;
+            // Base * Pax + Service Charge + VAT - Discount
+            const grandTotalUSD = baseTotal + serviceUSD + vatUSD - discount;
 
              // NGN Conversion
             const totalNGN = grandTotalUSD * rate;
@@ -975,15 +962,6 @@
                         <td class="py-4 px-4 text-right font-bold text-slate-800 text-xs">$${(currentFlightData.price * paxCount).toFixed(2)}</td>
                     </tr>
                 `;
-                taxes.forEach(t => {
-                     html += `
-                    <tr>
-                        <td class="py-4 px-4"><p class="text-slate-500 text-xs">${t.desc}</p></td>
-                        <td class="py-4 px-4 text-center text-slate-500 text-xs">${paxCount}</td>
-                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${t.val.toFixed(2)}</td>
-                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${(t.val * paxCount).toFixed(2)}</td>
-                    </tr>`;
-                });
 
                 // Add Service Charge Row if applicable
                 if(serviceUSD > 0) {
@@ -993,6 +971,17 @@
                         <td class="py-4 px-4 text-center text-slate-500 text-xs">1</td>
                         <td class="py-4 px-4 text-right text-slate-500 text-xs">$${serviceUSD.toFixed(2)}</td>
                         <td class="py-4 px-4 text-right text-slate-500 text-xs">$${serviceUSD.toFixed(2)}</td>
+                    </tr>`;
+                }
+                
+                // Add VAT Row (Only if Service Charge > 0)
+                if(vatUSD > 0) {
+                     html += `
+                    <tr>
+                        <td class="py-4 px-4"><p class="text-slate-500 text-xs">VAT (7.5% on Service Charge)</p></td>
+                        <td class="py-4 px-4 text-center text-slate-500 text-xs">1</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${vatUSD.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${vatUSD.toFixed(2)}</td>
                     </tr>`;
                 }
 

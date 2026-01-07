@@ -239,6 +239,17 @@
                     </div>
                 </div>
 
+                 <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Discount ($)</label>
+                        <input type="number" id="manualDiscount" class="glass-input w-full px-3 py-2.5 rounded-xl text-sm font-mono text-red-600" value="0.00" step="0.01">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Service Charge (NGN)</label>
+                        <input type="number" id="manualServiceCharge" class="glass-input w-full px-3 py-2.5 rounded-xl text-sm font-mono" value="0.00" step="100">
+                    </div>
+                </div>
+
                 <button onclick="updatePreview()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 mt-2">
                     Refresh Preview
                 </button>
@@ -858,6 +869,12 @@
                 const mPrice = parseFloat(getVal('manualPrice'));
                 if (!isNaN(mPrice)) currentFlightData.price = mPrice;
             }
+
+            // Get new manual inputs
+            const discount = parseFloat(getVal('manualDiscount')) || 0;
+            const serviceNGN = parseFloat(getVal('manualServiceCharge')) || 0;
+            const rate = 1495;
+            const serviceUSD = serviceNGN / rate;
             
             // Get Passengers
             const passengers = getPassengerNames();
@@ -881,16 +898,21 @@
                 { desc: "Transportation International/Domestic Tax - United States", val: currentFlightData.price * 0.075 },
                 { desc: "Harmonized Sales Tax - Canada - 100092287 RT0001", val: currentFlightData.price * 0.13 },
                 { desc: "Airport Improvement Fee Deposit - Canada", val: 28.70 },
-                { desc: "Flight Segment Tax - United States", val: 10.60 }
+                { desc: "Flight Segment Tax - United States", val: 10.60 },
+                // Add 7.5% Tax (VAT) on Base Fare
+                { desc: "VAT (7.5%)", val: currentFlightData.price * 0.075 }
             ];
             
             let singleTaxTotal = taxes.reduce((acc, t) => acc + t.val, 0);
             const singleGrandTotal = currentFlightData.price + singleTaxTotal;
-            const totalDue = singleGrandTotal * paxCount;
+            const totalDueBeforeExtras = singleGrandTotal * paxCount;
+
+            // Final Grand Total (USD)
+            // (Base + Taxes) * Pax + Service Charge (USD) - Discount (USD)
+            const grandTotalUSD = totalDueBeforeExtras + serviceUSD - discount;
 
              // NGN Conversion
-            const rate = 1495;
-            const totalNGN = totalDue * rate;
+            const totalNGN = grandTotalUSD * rate;
             const ngnStr = totalNGN.toLocaleString('en-NG', { style: 'currency', currency: 'NGN' });
             setText('dynamic-ngn-total', `≈ ${ngnStr}`);
             
@@ -940,7 +962,7 @@
 
             // Money
             setText('dynamic-subtotal', `$${(currentFlightData.price * paxCount).toFixed(2)}`);
-            setText('dynamic-grand-total', `$${totalDue.toFixed(2)}`);
+            setText('dynamic-grand-total', `$${grandTotalUSD.toFixed(2)}`);
             
             // Invoice Table
             const invItems = document.getElementById('invoice-items');
@@ -962,6 +984,29 @@
                         <td class="py-4 px-4 text-right text-slate-500 text-xs">$${(t.val * paxCount).toFixed(2)}</td>
                     </tr>`;
                 });
+
+                // Add Service Charge Row if applicable
+                if(serviceUSD > 0) {
+                     html += `
+                    <tr>
+                        <td class="py-4 px-4"><p class="text-slate-500 text-xs font-bold text-blue-600">Service Charge</p></td>
+                        <td class="py-4 px-4 text-center text-slate-500 text-xs">1</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${serviceUSD.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${serviceUSD.toFixed(2)}</td>
+                    </tr>`;
+                }
+
+                // Add Discount Row if applicable
+                if(discount > 0) {
+                     html += `
+                    <tr>
+                        <td class="py-4 px-4"><p class="text-slate-500 text-xs font-bold text-emerald-600">Discount Applied</p></td>
+                        <td class="py-4 px-4 text-center text-slate-500 text-xs">1</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs text-red-500">-$${discount.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs text-red-500">-$${discount.toFixed(2)}</td>
+                    </tr>`;
+                }
+
                 invItems.innerHTML = html;
             }
 

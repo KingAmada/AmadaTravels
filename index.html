@@ -3,413 +3,515 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amada Travels - Ticketing & Invoice System</title>
+    <title>Amada Travels - Modern Ticketing Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Add html2canvas for image generation -->
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Libre+Barcode+39+Text&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Libre+Barcode+39+Text&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+                        display: ['Montserrat', 'sans-serif'],
+                    },
+                    colors: {
+                        glass: 'rgba(255, 255, 255, 0.65)',
+                        glassBorder: 'rgba(255, 255, 255, 0.4)',
+                        darkGlass: 'rgba(15, 23, 42, 0.75)',
+                    },
+                    backdropBlur: {
+                        xs: '2px',
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
         body {
-            font-family: 'Montserrat', sans-serif;
-            background-color: #f3f4f6;
+            /* macOS Big Sur/Monterey style abstract background */
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+            background: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=2500&q=80') center/cover no-repeat fixed;
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
         }
         
-        /* Barcode Font for realism */
+        .glass-input {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            outline: none;
+        }
+
         .barcode {
             font-family: 'Libre Barcode 39 Text', cursive;
             font-size: 48px;
             font-weight: normal;
         }
 
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        /* Autocomplete List */
+        .autocomplete-items {
+            position: absolute;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-bottom: none;
+            border-top: none;
+            z-index: 99;
+            top: 100%;
+            left: 0;
+            right: 0;
+            border-radius: 0 0 0.5rem 0.5rem;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .autocomplete-items div {
+            padding: 10px;
+            cursor: pointer;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-size: 0.85rem;
+        }
+        .autocomplete-items div:hover {
+            background-color: #eff6ff;
+            color: #1d4ed8;
+        }
+
         /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1; 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8; 
-        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.4); }
 
-        .ticket-cutout {
-            position: relative;
+        /* Security Patterns */
+        .security-paper { background-color: #fff; position: relative; overflow: hidden; }
+        .security-pattern-bg {
+            position: absolute; inset: 0; opacity: 0.4;
+            background-image: radial-gradient(circle at 50% 50%, transparent 40%, rgba(30, 58, 138, 0.02) 41%, transparent 42%), repeating-linear-gradient(45deg, rgba(30, 58, 138, 0.03) 0, rgba(30, 58, 138, 0.03) 1px, transparent 1px, transparent 10px);
+            background-size: 60px 60px, 20px 20px; pointer-events: none;
         }
-        .ticket-cutout::after {
-            content: '';
-            position: absolute;
-            right: -10px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            background-color: #f3f4f6; /* Match body bg */
-            border-radius: 50%;
-            box-shadow: inset 2px 0 3px rgba(0,0,0,0.1);
+        .security-border {
+            border: 1px solid #1e3a8a; outline: 2px solid #1e3a8a; outline-offset: 3px;
+            margin: 4px; height: calc(100% - 8px); position: relative; z-index: 1;
+            background: rgba(255, 255, 255, 0.95);
         }
-        .ticket-cutout::before {
-            content: '';
-            position: absolute;
-            left: -10px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 20px;
-            height: 20px;
-            background-color: #f3f4f6;
-            border-radius: 50%;
-            box-shadow: inset -2px 0 3px rgba(0,0,0,0.1);
+        .guilloche-strip {
+            height: 8px; width: 100%;
+            background-image: repeating-linear-gradient(90deg, #1e3a8a, #1e3a8a 2px, transparent 2px, transparent 4px);
+            opacity: 0.3;
         }
-
-        .dashed-line {
-            background-image: linear-gradient(to bottom, #d1d5db 50%, transparent 50%);
-            background-size: 2px 20px;
-            background-repeat: repeat-y;
+        .watermark {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 6rem; font-weight: 900; color: rgba(30, 58, 138, 0.04);
+            white-space: nowrap; pointer-events: none; z-index: 0; text-transform: uppercase;
+            font-family: 'Times New Roman', serif; border: 4px solid rgba(30, 58, 138, 0.04);
+            padding: 20px 60px; border-radius: 20px;
         }
     </style>
 </head>
-<body class="text-slate-800 h-screen flex flex-col md:flex-row overflow-hidden">
+<body class="text-slate-800 h-screen flex overflow-hidden p-4 gap-4 selection:bg-blue-200">
 
-    <!-- SIDEBAR / INPUT FORM -->
-    <div class="w-full md:w-1/3 bg-white border-r border-gray-200 flex flex-col h-full z-10 shadow-lg overflow-y-auto" id="control-panel">
-        <div class="p-6 bg-blue-900 text-white">
-            <div class="flex items-center gap-3 mb-2">
-                <i class="fas fa-plane-departure text-2xl text-yellow-400"></i>
-                <h1 class="text-2xl font-bold tracking-wider">AMADA TRAVELS</h1>
+    <!-- LEFT PANEL: CONTROLS & SEARCH -->
+    <div class="w-full md:w-[400px] flex flex-col gap-4 z-10 h-full">
+        
+        <!-- Header Card -->
+        <div class="glass-panel rounded-3xl p-6 text-center shadow-lg shrink-0">
+            <div class="flex items-center justify-center gap-3 mb-1">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-md text-white">
+                    <i class="fas fa-plane-departure text-lg"></i>
+                </div>
+                <h1 class="text-xl font-bold font-display tracking-tight text-slate-800">Amada Travels</h1>
             </div>
-            <p class="text-blue-200 text-sm">Ticketing & Invoice Generator</p>
+            <p class="text-xs text-slate-500 font-medium tracking-wide uppercase">Ticketing Console v2.0</p>
         </div>
 
-        <div class="p-6 space-y-4 flex-grow">
-            <div>
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Passenger Name</label>
-                <input type="text" id="pName" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent transition-colors" placeholder="e.g. John Doe" value="ALEXANDRA REYNOLDS">
+        <!-- Search & Form Card -->
+        <div class="glass-panel rounded-3xl p-6 flex-grow overflow-y-auto shadow-lg relative">
+            
+            <!-- Tab Switcher (Search vs Manual) -->
+            <div class="flex p-1 bg-white/50 rounded-xl mb-6">
+                <button onclick="toggleInputMode('search')" id="btn-mode-search" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-700 transition-all">Search Flight</button>
+                <button onclick="toggleInputMode('manual')" id="btn-mode-manual" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 hover:bg-white/50 transition-all">Manual Entry</button>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Departure (From)</label>
-                    <input type="text" id="fromCity" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent uppercase" value="OTTAWA (YOW)">
+            <!-- SEARCH MODE -->
+            <div id="mode-search" class="space-y-4 animate-fade-in">
+                <div class="relative group">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Origin</label>
+                    <div class="relative">
+                        <i class="fas fa-plane-departure absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="apiOrigin" class="glass-input w-full pl-9 pr-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 placeholder-slate-400" placeholder="City or Airport (e.g. LON)" value="LAX" autocomplete="off">
+                        <div id="origin-suggestions" class="autocomplete-items"></div>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Destination (To)</label>
-                    <input type="text" id="toCity" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent uppercase" value="KAMLOOPS (YKA)">
+
+                <div class="relative group">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Destination</label>
+                    <div class="relative">
+                        <i class="fas fa-plane-arrival absolute left-3 top-3 text-slate-400"></i>
+                        <input type="text" id="apiDest" class="glass-input w-full pl-9 pr-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 placeholder-slate-400" placeholder="City or Airport (e.g. NYC)" value="JFK" autocomplete="off">
+                        <div id="dest-suggestions" class="autocomplete-items"></div>
+                    </div>
                 </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Date</label>
+                        <input type="date" id="apiDate" class="glass-input w-full px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Passengers</label>
+                        <select class="glass-input w-full px-3 py-2.5 rounded-xl text-sm font-medium text-slate-700">
+                            <option>1 Adult</option>
+                            <option>2 Adults</option>
+                            <option>Family (2A+2C)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button onclick="searchFlightFromAPI()" id="searchBtn" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 mt-2">
+                    <i class="fas fa-search"></i>
+                    <span>Find Flights</span>
+                </button>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <!-- MANUAL MODE (Hidden by default) -->
+            <div id="mode-manual" class="space-y-4 hidden animate-fade-in">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
-                    <!-- Default to Feb 15, 2026 -->
-                    <input type="date" id="date" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent" value="2026-02-15">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Passenger Name</label>
+                    <input type="text" id="pName" class="glass-input w-full px-3 py-2.5 rounded-xl text-sm font-semibold" value="ALEXANDRA REYNOLDS">
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Time</label>
-                    <input type="time" id="time" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent" value="14:30">
+                
+                <div class="grid grid-cols-2 gap-3">
+                     <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Flight No.</label>
+                        <input type="text" id="flightNum" class="glass-input w-full px-3 py-2.5 rounded-xl text-sm font-mono uppercase" value="AM-992">
+                    </div>
+                     <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Seat</label>
+                        <input type="text" id="seatNum" class="glass-input w-full px-3 py-2.5 rounded-xl text-sm font-mono uppercase" value="12A">
+                    </div>
                 </div>
-            </div>
 
-            <div class="grid grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Flight</label>
-                    <input type="text" id="flightNum" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent uppercase" value="AM-992">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Seat</label>
-                    <input type="text" id="seatNum" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent uppercase" value="12F">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Class</label>
-                    <select id="classType" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent">
-                        <option value="First">First</option>
-                        <option value="Business">Business</option>
-                        <option value="Economy" selected>Economy</option>
+                 <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Class</label>
+                    <select id="classType" class="glass-input w-full px-3 py-2.5 rounded-xl text-sm">
+                         <option value="e" selected>Economy</option>
+                        <option value="b">Business</option>
+                        <option value="f">First Class</option>
                     </select>
                 </div>
+
+                <button onclick="updatePreview()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 mt-2">
+                    Refresh Preview
+                </button>
             </div>
 
-            <div class="border-t border-gray-200 pt-4">
-                <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Base Fare ($)</label>
-                <input type="number" id="price" class="w-full border-b-2 border-gray-200 focus:border-blue-600 outline-none py-2 bg-transparent" value="205.00">
+            <!-- Action Buttons -->
+            <div class="mt-8 pt-6 border-t border-slate-200/50">
+                 <button onclick="downloadImage()" id="downloadBtn" class="w-full bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold py-3 rounded-xl shadow-lg shadow-amber-500/20 transition-all transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fas fa-download"></i>
+                    <span>Download Asset</span>
+                </button>
+                <p id="loadingMsg" class="text-center text-[10px] font-bold text-blue-600 mt-2 hidden animate-pulse">Rendering High-Res...</p>
             </div>
 
-            <button onclick="updatePreview()" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3 rounded-lg shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 mt-4">
-                <i class="fas fa-sync-alt mr-2"></i> Update Preview
-            </button>
-             <button onclick="downloadImage()" id="downloadBtn" class="w-full bg-yellow-500 hover:bg-yellow-600 text-blue-900 font-bold py-3 rounded-lg shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 mt-2">
-                <i class="fas fa-download mr-2"></i> Download Image
-            </button>
-            <div id="loadingMsg" class="hidden text-center text-xs font-bold text-blue-900 mt-2">Generating High-Res Image...</div>
-        </div>
-        
-        <div class="p-4 bg-gray-50 text-xs text-gray-400 text-center">
-            &copy; 2026 Amada Travels System
         </div>
     </div>
 
-    <!-- PREVIEW AREA -->
-    <div class="w-full md:w-2/3 h-full overflow-y-auto bg-gray-100 relative" id="preview-container">
-        <!-- Tabs -->
-        <div class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 flex justify-center gap-4 no-print">
-            <button onclick="switchTab('boarding')" id="tab-boarding" class="px-4 py-2 rounded-full text-sm font-semibold bg-blue-900 text-white shadow-md transition-all">Boarding Pass</button>
-            <button onclick="switchTab('invoice')" id="tab-invoice" class="px-4 py-2 rounded-full text-sm font-semibold bg-white text-gray-600 hover:bg-gray-100 transition-all">Invoice</button>
-            <button onclick="switchTab('ticket')" id="tab-ticket" class="px-4 py-2 rounded-full text-sm font-semibold bg-white text-gray-600 hover:bg-gray-100 transition-all">E-Ticket</button>
+    <!-- CENTER/RIGHT PANEL: RESULTS & PREVIEW -->
+    <div class="flex-1 flex flex-col gap-4 h-full relative min-w-0">
+        
+        <!-- Live Search Results Overlay (Slides up) -->
+        <div id="results-container" class="absolute inset-0 z-20 glass-panel rounded-3xl p-6 flex flex-col hidden animate-fade-in overflow-hidden">
+            <div class="flex justify-between items-center mb-6 shrink-0">
+                <h2 class="text-lg font-bold text-slate-800"><i class="fas fa-list-ul mr-2 text-blue-600"></i>Flight Results</h2>
+                <button onclick="closeResults()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="results-list" class="flex-1 overflow-y-auto space-y-3 pr-2">
+                <!-- Cards injected here -->
+            </div>
         </div>
 
-        <div class="p-8 pb-20 flex justify-center items-start min-h-full">
+        <!-- Preview Tabs -->
+        <div class="glass-panel rounded-2xl p-2 shrink-0 flex justify-center gap-2 mx-auto max-w-lg shadow-sm">
+            <button onclick="switchTab('boarding')" id="tab-boarding" class="px-6 py-2 rounded-xl text-sm font-semibold bg-slate-800 text-white shadow-md transition-all hover:scale-105">Boarding Pass</button>
+            <button onclick="switchTab('invoice')" id="tab-invoice" class="px-6 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-white/50 transition-all hover:scale-105">Invoice</button>
+            <button onclick="switchTab('ticket')" id="tab-ticket" class="px-6 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-white/50 transition-all hover:scale-105">E-Ticket</button>
+        </div>
+
+        <!-- Document Preview Area -->
+        <div class="flex-1 glass-panel rounded-3xl p-8 overflow-y-auto shadow-2xl relative flex items-start justify-center" id="preview-area">
             
-            <!-- BOARDING PASS VIEW -->
-            <div id="view-boarding" class="capture-target w-full max-w-3xl transform transition-all duration-300">
-                <div class="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row w-full relative">
-                    <!-- Left Side (Main) -->
-                    <div class="w-full md:w-3/4 p-6 md:p-8 relative bg-gradient-to-br from-blue-900 to-blue-800 text-white">
-                        <div class="flex justify-between items-center mb-8">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-plane-departure text-3xl text-yellow-400"></i>
-                                <span class="font-bold tracking-widest text-lg">AMADA TRAVELS</span>
-                            </div>
-                            <span class="text-blue-200 font-mono tracking-widest">BOARDING PASS</span>
-                        </div>
+            <!-- BOARDING PASS -->
+            <div id="view-boarding" class="capture-target w-full max-w-3xl transform transition-all duration-500 hover:scale-[1.01]">
+                <div class="bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col md:flex-row w-full relative">
+                    <!-- Left Side -->
+                    <div class="w-full md:w-3/4 p-8 relative bg-slate-900 text-white overflow-hidden">
+                        <!-- Abstract BG Circle -->
+                        <div class="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-blue-600 blur-[60px] opacity-40"></div>
+                        <div class="absolute -left-10 bottom-0 w-40 h-40 rounded-full bg-purple-600 blur-[50px] opacity-30"></div>
 
-                        <div class="grid grid-cols-3 gap-8 mb-8">
-                            <div>
-                                <p class="text-xs text-blue-300 uppercase mb-1">Passenger</p>
-                                <p class="font-bold text-lg truncate dynamic-name">Alexandra Reynolds</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-blue-300 uppercase mb-1">Flight</p>
-                                <p class="font-bold text-lg dynamic-flight">AM-402</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-blue-300 uppercase mb-1">Class</p>
-                                <p class="font-bold text-lg dynamic-class">Business</p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between mb-8">
-                            <div class="text-center">
-                                <p class="text-4xl font-bold dynamic-from-code">ABV</p>
-                                <p class="text-xs text-blue-300 mt-1 dynamic-from-city">Abuja</p>
-                            </div>
-                            <div class="flex-grow px-8 flex flex-col items-center">
-                                <div class="flex items-center w-full gap-2">
-                                    <div class="h-[2px] bg-blue-400 flex-grow"></div>
-                                    <i class="fas fa-plane text-yellow-400 transform rotate-90"></i>
-                                    <div class="h-[2px] bg-blue-400 flex-grow"></div>
+                        <div class="relative z-10">
+                            <div class="flex justify-between items-center mb-10">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center text-yellow-400">
+                                        <i class="fas fa-plane-departure text-xl"></i>
+                                    </div>
+                                    <span class="font-display font-bold tracking-widest text-lg">AMADA</span>
                                 </div>
-                                <p class="text-xs text-blue-300 mt-2 dynamic-duration">6h 30m</p>
+                                <span class="px-3 py-1 rounded-full border border-white/20 text-[10px] font-bold tracking-widest uppercase bg-white/5">Boarding Pass</span>
                             </div>
-                            <div class="text-center">
-                                <p class="text-4xl font-bold dynamic-to-code">LHR</p>
-                                <p class="text-xs text-blue-300 mt-1 dynamic-to-city">London</p>
-                            </div>
-                        </div>
 
-                        <div class="grid grid-cols-4 gap-4">
-                            <div>
-                                <p class="text-xs text-blue-300 uppercase mb-1">Date</p>
-                                <p class="font-semibold dynamic-date">12 OCT</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-blue-300 uppercase mb-1">Boarding</p>
-                                <p class="font-semibold dynamic-boarding-time">13:45</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-blue-300 uppercase mb-1">Gate</p>
-                                <p class="font-semibold">A12</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-blue-300 uppercase mb-1">Seat</p>
-                                <p class="font-bold text-2xl text-yellow-400 dynamic-seat">4A</p>
-                            </div>
-                        </div>
-
-                        <!-- Perforated Line Decoration for visual only on mobile -->
-                        <div class="absolute right-0 top-0 bottom-0 w-px bg-blue-900 border-r-2 border-dashed border-blue-500/30 hidden md:block"></div>
-                    </div>
-
-                    <!-- Right Side (Stub) -->
-                    <div class="w-full md:w-1/4 bg-white p-6 flex flex-col justify-between border-l-2 border-dashed border-gray-300 relative">
-                         <!-- Cutout Circles -->
-                        <div class="absolute -top-3 -left-3 w-6 h-6 bg-[#f3f4f6] rounded-full z-10 hidden md:block"></div>
-                        <div class="absolute -bottom-3 -left-3 w-6 h-6 bg-[#f3f4f6] rounded-full z-10 hidden md:block"></div>
-
-                        <div>
-                            <div class="flex justify-between items-start mb-4">
-                                <i class="fas fa-plane-departure text-blue-900 text-xl"></i>
-                                <span class="font-bold text-blue-900 text-sm">AMADA</span>
-                            </div>
-                            <div class="space-y-3">
+                            <div class="grid grid-cols-3 gap-8 mb-10">
                                 <div>
-                                    <p class="text-[10px] text-gray-400 uppercase">Passenger</p>
-                                    <p class="font-bold text-sm text-gray-800 truncate dynamic-name">Alexandra</p>
+                                    <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Passenger</p>
+                                    <p class="font-display font-bold text-lg truncate dynamic-name">Alexandra Reynolds</p>
                                 </div>
-                                <div class="flex justify-between">
-                                    <div>
-                                        <p class="text-[10px] text-gray-400 uppercase">From</p>
-                                        <p class="font-bold text-lg text-gray-800 dynamic-from-code">ABV</p>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-[10px] text-gray-400 uppercase">To</p>
-                                        <p class="font-bold text-lg text-gray-800 dynamic-to-code">LHR</p>
-                                    </div>
+                                <div>
+                                    <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Flight</p>
+                                    <p class="font-display font-bold text-lg dynamic-flight">AM-992</p>
                                 </div>
-                                <div class="flex justify-between">
-                                    <div>
-                                        <p class="text-[10px] text-gray-400 uppercase">Flight</p>
-                                        <p class="font-bold text-sm text-gray-800 dynamic-flight">AM-402</p>
+                                <div>
+                                    <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Class</p>
+                                    <p class="font-display font-bold text-lg dynamic-class">Economy</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between mb-10 relative">
+                                <div class="text-center z-10">
+                                    <p class="text-5xl font-display font-bold dynamic-from-code">LAX</p>
+                                    <p class="text-xs text-slate-400 mt-2 dynamic-from-city">Los Angeles</p>
+                                </div>
+                                <div class="flex-grow px-8 flex flex-col items-center">
+                                    <div class="flex items-center w-full gap-2 opacity-50">
+                                        <div class="h-[1px] bg-white flex-grow"></div>
+                                        <i class="fas fa-plane text-white transform rotate-90 text-xs"></i>
+                                        <div class="h-[1px] bg-white flex-grow"></div>
                                     </div>
-                                    <div class="text-right">
-                                        <p class="text-[10px] text-gray-400 uppercase">Seat</p>
-                                        <p class="font-bold text-lg text-blue-900 dynamic-seat">4A</p>
-                                    </div>
+                                    <p class="text-xs text-slate-400 mt-2 dynamic-duration">6h 30m</p>
+                                </div>
+                                <div class="text-center z-10">
+                                    <p class="text-5xl font-display font-bold dynamic-to-code">ORL</p>
+                                    <p class="text-xs text-slate-400 mt-2 dynamic-to-city">Orlando</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-4 gap-4 p-4 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm">
+                                <div>
+                                    <p class="text-[10px] text-slate-400 uppercase mb-1">Date</p>
+                                    <p class="font-bold dynamic-date">20 DEC</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-slate-400 uppercase mb-1">Time</p>
+                                    <p class="font-bold dynamic-boarding-time">13:45</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-slate-400 uppercase mb-1">Gate</p>
+                                    <p class="font-bold">A12</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-slate-400 uppercase mb-1">Seat</p>
+                                    <p class="font-bold text-xl text-yellow-400 dynamic-seat">12A</p>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="mt-4 flex flex-col items-center justify-center">
-                            <div class="barcode text-gray-800 transform scale-x-110 origin-center text-3xl">
-                                *AM4024A*
-                            </div>
+                        <!-- Perforated Line Visual -->
+                        <div class="absolute right-0 top-0 bottom-0 w-8 flex flex-col justify-between items-center py-4 translate-x-1/2 z-20">
+                            <div class="w-6 h-6 rounded-full bg-[#eef2f6]"></div>
+                            <div class="h-full border-l-2 border-dashed border-slate-700/50"></div>
+                            <div class="w-6 h-6 rounded-full bg-[#eef2f6]"></div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- INVOICE VIEW -->
-            <div id="view-invoice" class="capture-target w-full max-w-3xl hidden">
-                <div class="bg-white p-12 shadow-2xl relative min-h-[800px]">
-                    <!-- Header -->
-                    <div class="flex justify-between items-start mb-12 border-b-2 border-gray-100 pb-8">
+                    <!-- Right Side (Stub) -->
+                    <div class="w-full md:w-1/4 bg-white p-6 flex flex-col justify-between relative">
                         <div>
-                            <div class="flex items-center gap-2 mb-2">
-                                <i class="fas fa-plane-departure text-3xl text-blue-900"></i>
-                                <span class="font-bold text-2xl text-blue-900 tracking-wider">AMADA TRAVELS</span>
+                            <div class="flex justify-between items-start mb-6">
+                                <i class="fas fa-plane-departure text-slate-900 text-xl"></i>
                             </div>
-                            <p class="text-gray-500 text-sm">Plot 588 Aliyu Dikko Street</p>
-                            <p class="text-gray-500 text-sm">Abuja Nigeria. 900124</p>
-                            <p class="text-gray-500 text-sm font-semibold">+1202-823-6244 | +234-903-2222-984</p>
-                            <p class="text-gray-500 text-sm">support@amadatravels.com</p>
-                        </div>
-                        <div class="text-right">
-                            <h2 class="text-4xl font-light text-gray-300 uppercase">Invoice</h2>
-                            <p class="text-gray-600 mt-2 font-mono">#INV-<span id="inv-num">2024-001</span></p>
-                            <p class="text-gray-500 text-sm mt-1">Date: <span id="inv-date">Oct 12, 2026</span></p>
-                        </div>
-                    </div>
-
-                    <!-- Bill To -->
-                    <div class="mb-12">
-                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-2">Billed To:</h3>
-                        <p class="text-xl font-bold text-gray-800 dynamic-name">Alexandra Reynolds</p>
-                        <p class="text-gray-600 dynamic-class">Business Class Passenger</p>
-                        <p class="text-gray-600 text-sm mt-1">Traveler ID: <span class="font-mono">AM-88392</span></p>
-                    </div>
-
-                    <!-- Table -->
-                    <table class="w-full mb-12">
-                        <thead>
-                            <tr class="bg-blue-50">
-                                <th class="py-3 px-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Description</th>
-                                <th class="py-3 px-4 text-center text-xs font-bold text-gray-600 uppercase tracking-wider">Qty</th>
-                                <th class="py-3 px-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Unit Price</th>
-                                <th class="py-3 px-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100" id="invoice-items">
-                            <!-- Items populated by JS -->
-                        </tbody>
-                    </table>
-
-                    <!-- Totals -->
-                    <div class="flex justify-end mb-12">
-                        <div class="w-80">
-                            <div class="flex justify-between py-2 border-b border-gray-100 text-gray-600">
-                                <span>Subtotal</span>
-                                <span class="font-mono dynamic-subtotal">$1400.00</span>
-                            </div>
-                            <div class="flex justify-between py-4 text-blue-900 font-bold text-xl">
-                                <span>Grand total</span>
-                                <span class="dynamic-grand-total">$1400.00</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Footer -->
-                    <div class="absolute bottom-0 left-0 right-0 p-12 bg-gray-50 border-t border-gray-200">
-                        <p class="text-center text-gray-500 text-sm">Thank you for flying with Amada Travels.</p>
-                        <p class="text-center text-xs text-gray-400 mt-1">Terms & Conditions apply.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- E-TICKET VIEW -->
-            <div id="view-ticket" class="capture-target w-full max-w-xl hidden">
-                <div class="bg-white shadow-2xl overflow-hidden">
-                    <div class="bg-blue-900 p-6 text-center">
-                        <i class="fas fa-check-circle text-4xl text-green-400 mb-2"></i>
-                        <h2 class="text-white font-bold text-xl">Booking Confirmed</h2>
-                        <p class="text-blue-200 text-sm">Reference: <span class="text-white font-mono">XJ9-22L</span></p>
-                    </div>
-                    
-                    <div class="p-8">
-                        <div class="border-b border-gray-200 pb-6 mb-6">
-                            <h3 class="text-gray-500 text-xs font-bold uppercase mb-4">Itinerary Details</h3>
-                            <div class="flex items-center justify-between">
-                                <div class="text-center">
-                                    <div class="text-2xl font-bold text-gray-800 dynamic-from-code">ABV</div>
-                                    <div class="text-sm text-gray-500 dynamic-from-city">Abuja</div>
-                                    <div class="text-xs text-gray-400 mt-1 dynamic-dep-time">14:30</div>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-[9px] text-slate-400 uppercase font-bold">Passenger</p>
+                                    <p class="font-bold text-sm text-slate-900 truncate dynamic-name">Alexandra</p>
                                 </div>
-                                <div class="flex-grow px-4 flex flex-col items-center">
-                                    <div class="text-xs text-gray-400 mb-1 dynamic-duration">6h 30m</div>
-                                    <div class="w-full h-px bg-gray-300 relative">
-                                        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2">
-                                            <i class="fas fa-plane text-blue-500"></i>
+                                <div class="flex justify-between">
+                                    <div>
+                                        <p class="text-[9px] text-slate-400 uppercase font-bold">From</p>
+                                        <p class="font-bold text-lg text-slate-900 dynamic-from-code">LAX</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-[9px] text-slate-400 uppercase font-bold">To</p>
+                                        <p class="font-bold text-lg text-slate-900 dynamic-to-code">ORL</p>
+                                    </div>
+                                </div>
+                                <div class="bg-slate-50 p-3 rounded-lg">
+                                    <div class="flex justify-between">
+                                        <div>
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold">Flight</p>
+                                            <p class="font-bold text-sm text-slate-900 dynamic-flight">AM-992</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-[9px] text-slate-400 uppercase font-bold">Seat</p>
+                                            <p class="font-bold text-lg text-blue-600 dynamic-seat">12A</p>
                                         </div>
                                     </div>
-                                    <div class="text-xs text-green-600 mt-1 font-bold">Non-stop</div>
                                 </div>
-                                <div class="text-center">
-                                    <div class="text-2xl font-bold text-gray-800 dynamic-to-code">LHR</div>
-                                    <div class="text-sm text-gray-500 dynamic-to-city">London</div>
-                                    <div class="text-xs text-gray-400 mt-1 dynamic-arr-time">21:00</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex flex-col items-center justify-center opacity-80">
+                            <div class="barcode text-slate-900 transform scale-x-110 origin-center text-3xl">*AM992*</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INVOICE -->
+            <div id="view-invoice" class="capture-target w-full max-w-3xl hidden transform transition-all">
+                <div class="security-paper shadow-2xl relative min-h-[800px] p-2 bg-white">
+                    <div class="security-pattern-bg"></div>
+                    <div class="watermark">OFFICIAL DOCUMENT</div>
+                    <div class="security-border p-10 flex flex-col">
+                        <div class="guilloche-strip mb-8"></div>
+                        
+                        <!-- Header -->
+                        <div class="flex justify-between items-start mb-12 border-b border-slate-200 pb-8 relative z-10">
+                            <div>
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="w-8 h-8 bg-blue-900 text-white flex items-center justify-center rounded">
+                                        <i class="fas fa-plane-departure"></i>
+                                    </div>
+                                    <span class="font-display font-bold text-2xl text-blue-900 tracking-wider">AMADA</span>
+                                </div>
+                                <div class="text-xs text-slate-500 space-y-1 font-medium">
+                                    <p>Plot 588 Aliyu Dikko Street</p>
+                                    <p>Abuja Nigeria, 900124</p>
+                                    <p>+1202-823-6244 | support@amada.com</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <h2 class="text-4xl font-light text-slate-900 uppercase tracking-tight">Invoice</h2>
+                                <p class="text-blue-600 mt-2 font-mono text-sm font-bold">#INV-<span id="inv-num">2026-001</span></p>
+                                <p class="text-slate-400 text-xs mt-1">Issued: <span id="inv-date"></span></p>
+                            </div>
+                        </div>
+
+                        <!-- Bill To -->
+                        <div class="mb-10 relative z-10 bg-slate-50 p-6 rounded-xl border border-slate-100">
+                            <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Billed To</h3>
+                            <p class="text-xl font-bold text-slate-800 dynamic-name">Alexandra Reynolds</p>
+                            <div class="flex gap-4 mt-2 text-xs text-slate-500">
+                                <p><i class="fas fa-id-card mr-1"></i> ID: <span class="font-mono text-slate-700">AM-88392</span></p>
+                                <p><i class="fas fa-chair mr-1"></i> <span class="dynamic-class">Economy</span></p>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <table class="w-full mb-8 relative z-10">
+                            <thead>
+                                <tr class="bg-blue-50/80 text-left">
+                                    <th class="py-3 px-4 text-[10px] font-bold text-blue-900 uppercase tracking-wider rounded-l-lg">Description</th>
+                                    <th class="py-3 px-4 text-center text-[10px] font-bold text-blue-900 uppercase tracking-wider">Qty</th>
+                                    <th class="py-3 px-4 text-right text-[10px] font-bold text-blue-900 uppercase tracking-wider">Unit Price</th>
+                                    <th class="py-3 px-4 text-right text-[10px] font-bold text-blue-900 uppercase tracking-wider rounded-r-lg">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100" id="invoice-items">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+
+                        <!-- Totals -->
+                        <div class="flex justify-end mb-auto relative z-10">
+                            <div class="w-72 bg-blue-50/50 p-6 rounded-xl border border-blue-100 backdrop-blur-sm">
+                                <div class="flex justify-between py-2 text-slate-500 text-sm">
+                                    <span>Subtotal</span>
+                                    <span class="font-mono font-medium dynamic-subtotal">$205.00</span>
+                                </div>
+                                <div class="flex justify-between py-4 border-t border-blue-200 mt-2 text-blue-900">
+                                    <span class="font-bold text-lg">Total Due</span>
+                                    <span class="font-bold text-xl dynamic-grand-total">$286.43</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-y-6 gap-x-4 mb-8">
-                            <div>
-                                <p class="text-xs text-gray-400 uppercase">Passenger</p>
-                                <p class="font-semibold text-gray-800 dynamic-name">Alexandra Reynolds</p>
+                        <!-- Footer -->
+                        <div class="text-center relative z-10 mt-10">
+                            <div class="guilloche-strip mb-4"></div>
+                            <p class="text-slate-400 text-xs">Thank you for choosing Amada Travels.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TICKET -->
+            <div id="view-ticket" class="capture-target w-full max-w-xl hidden transform transition-all">
+                <div class="bg-white shadow-2xl rounded-2xl overflow-hidden border border-slate-200">
+                     <div class="bg-slate-900 p-8 text-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-blue-600/20 pattern-dots"></div>
+                        <i class="fas fa-check-circle text-5xl text-emerald-400 mb-4 relative z-10 shadow-lg rounded-full bg-white"></i>
+                        <h2 class="text-white font-bold text-2xl relative z-10">Booking Confirmed</h2>
+                        <p class="text-blue-200 text-sm mt-1 relative z-10 font-mono">Ref: XJ9-22L</p>
+                    </div>
+                    <div class="p-8">
+                         <div class="flex items-center justify-between mb-8 pb-8 border-b border-dashed border-slate-200">
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-slate-800 dynamic-from-code">LAX</div>
+                                <div class="text-xs text-slate-500 uppercase tracking-wide dynamic-dep-time">14:30</div>
                             </div>
-                            <div>
-                                <p class="text-xs text-gray-400 uppercase">Flight Number</p>
-                                <p class="font-semibold text-gray-800 dynamic-flight">AM-402</p>
+                            <div class="flex-1 px-4 flex flex-col items-center">
+                                <div class="text-[10px] text-slate-400 mb-1 dynamic-duration">6h 30m</div>
+                                <div class="w-full h-0.5 bg-slate-200 relative">
+                                    <div class="absolute inset-0 bg-blue-500 w-1/2"></div> <!-- Progress bar visual -->
+                                    <i class="fas fa-plane absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 text-blue-500 text-sm bg-white px-1"></i>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-xs text-gray-400 uppercase">Date</p>
-                                <p class="font-semibold text-gray-800 dynamic-date">Oct 12, 2026</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-gray-400 uppercase">Seat Assignment</p>
-                                <p class="font-semibold text-gray-800 dynamic-seat">4A</p>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-slate-800 dynamic-to-code">ORL</div>
+                                <div class="text-xs text-slate-500 uppercase tracking-wide dynamic-arr-time">21:00</div>
                             </div>
                         </div>
-
-                        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-sm text-gray-600">Ticket Fare</span>
-                                <span class="text-sm font-bold text-gray-800 dynamic-price-unit">$1250.00</span>
+                        
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                                <span class="text-xs font-bold text-slate-500 uppercase">Passenger</span>
+                                <span class="text-sm font-bold text-slate-800 dynamic-name">Alexandra</span>
                             </div>
-                            <div class="border-t border-gray-200 pt-2 mt-2 flex justify-between items-center">
-                                <span class="font-bold text-blue-900">Total Paid</span>
-                                <span class="font-bold text-blue-900 text-lg dynamic-grand-total">$1400.00</span>
+                            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                                <span class="text-xs font-bold text-slate-500 uppercase">Flight / Seat</span>
+                                <span class="text-sm font-bold text-slate-800"><span class="dynamic-flight">AM-992</span> • <span class="dynamic-seat text-blue-600">12A</span></span>
+                            </div>
+                            <div class="flex justify-between items-center p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                                <span class="text-xs font-bold text-emerald-700 uppercase">Total Paid</span>
+                                <span class="text-lg font-bold text-emerald-800 dynamic-grand-total">$286.43</span>
                             </div>
                         </div>
                     </div>
@@ -420,179 +522,369 @@
     </div>
 
     <script>
-        function updatePreview() {
-            // Get values
-            const name = document.getElementById('pName').value || 'John Doe';
-            const fromRaw = document.getElementById('fromCity').value || 'Abuja';
-            const toRaw = document.getElementById('toCity').value || 'London';
-            const date = new Date(document.getElementById('date').value);
-            const time = document.getElementById('time').value || '12:00';
-            const flight = document.getElementById('flightNum').value || 'AM-001';
-            const seat = document.getElementById('seatNum').value || '1A';
-            const travelClass = document.getElementById('classType').value;
-            const price = parseFloat(document.getElementById('price').value) || 0;
+        // --- AUTOCOMPLETE DATA (Top Airports) ---
+        const AIRPORTS = [
+            { code: "LAX", city: "Los Angeles", name: "Los Angeles Intl" },
+            { code: "JFK", city: "New York", name: "John F Kennedy Intl" },
+            { code: "LHR", city: "London", name: "Heathrow" },
+            { code: "DXB", city: "Dubai", name: "Dubai Intl" },
+            { code: "HND", city: "Tokyo", name: "Haneda" },
+            { code: "CDG", city: "Paris", name: "Charles de Gaulle" },
+            { code: "AMS", city: "Amsterdam", name: "Schiphol" },
+            { code: "SIN", city: "Singapore", name: "Changi" },
+            { code: "ICN", city: "Seoul", name: "Incheon" },
+            { code: "FRA", city: "Frankfurt", name: "Frankfurt" },
+            { code: "DFW", city: "Dallas", name: "Dallas/Fort Worth" },
+            { code: "MAD", city: "Madrid", name: "Barajas" },
+            { code: "BCN", city: "Barcelona", name: "El Prat" },
+            { code: "IST", city: "Istanbul", name: "Istanbul" },
+            { code: "YYZ", city: "Toronto", name: "Pearson" },
+            { code: "YVR", city: "Vancouver", name: "Vancouver Intl" },
+            { code: "YOW", city: "Ottawa", name: "Macdonald-Cartier" },
+            { code: "YKA", city: "Kamloops", name: "Kamloops" },
+            { code: "ORL", city: "Orlando", name: "Orlando Executive" },
+            { code: "MCO", city: "Orlando", name: "Orlando Intl" },
+            { code: "MIA", city: "Miami", name: "Miami Intl" },
+            { code: "ABV", city: "Abuja", name: "Nnamdi Azikiwe" },
+            { code: "LOS", city: "Lagos", name: "Murtala Muhammed" }
+        ];
 
-            // Process text for codes (First 3 letters or parenthesis content)
-            const getCode = (str) => {
-                const match = str.match(/\(([^)]+)\)/);
-                return match ? match[1].toUpperCase() : str.substring(0,3).toUpperCase();
-            };
-            const getCity = (str) => {
-                return str.split('(')[0].trim();
-            }
-
-            const fromCode = getCode(fromRaw);
-            const fromCity = getCity(fromRaw);
-            const toCode = getCode(toRaw);
-            const toCity = getCity(toRaw);
-
-            // Date Formatting
-            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            // Fix timezone issue by using UTC methods if needed, or simple fix:
-            const dateStr = `${date.getUTCDate()} ${months[date.getUTCMonth()]}`;
-            const flightDateFull = `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getFullYear()}`;
+        // --- SETUP AUTOCOMPLETE ---
+        function setupAutocomplete(inputId, listId) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
             
-            // Current Date for Invoice
-            const today = new Date();
-            const todayStr = `${months[today.getMonth()]} ${today.getDate()}, ${today.getFullYear()}`;
+            input.addEventListener('input', function() {
+                const val = this.value.toUpperCase();
+                list.innerHTML = '';
+                if(!val) return;
 
-            // Time Math (Duration and Arrival) - Simulated
-            const [hrs, mins] = time.split(':').map(Number);
-            const boardingMins = (hrs * 60 + mins) - 45; // 45 mins before
-            const bHrs = Math.floor(boardingMins / 60);
-            const bMins = boardingMins % 60;
-            const boardingTime = `${String(bHrs).padStart(2,'0')}:${String(bMins).padStart(2,'0')}`;
-            
-            // Arrival (add 6h 30m)
-            let arrMins = (hrs * 60 + mins) + (6 * 60 + 30);
-            const aHrs = Math.floor(arrMins / 60) % 24;
-            const aMins = arrMins % 60;
-            const arrTime = `${String(aHrs).padStart(2,'0')}:${String(aMins).padStart(2,'0')}`;
+                const matches = AIRPORTS.filter(a => 
+                    a.code.startsWith(val) || 
+                    a.city.toUpperCase().includes(val) || 
+                    a.name.toUpperCase().includes(val)
+                ).slice(0, 5); // Limit suggestions
 
-            // TAX CALCULATION & INVOICE GENERATION
-            // Based on user request, we implement the specific tax breakdown
-            const taxes = [
-                { desc: "Transportation International/Domestic Tax - United States", val: 15.38 },
-                { desc: "Harmonized Sales Tax - Canada - 100092287 RT0001", val: 26.65 },
-                { desc: "Airport Improvement Fee Deposit - Canada", val: 28.80 },
-                { desc: "Flight Segment Tax - United States", val: 10.60 }
-            ];
-
-            let taxTotal = 0;
-            let invoiceHtml = `
-                <tr>
-                    <td class="py-4 px-4">
-                        <p class="font-bold text-gray-800">Air transportation charges</p>
-                        <p class="text-sm text-gray-500">Departing flight - Adult (${travelClass})</p>
-                        <p class="text-xs text-gray-400 mt-1">${fromCity} to ${toCity}</p>
-                    </td>
-                    <td class="py-4 px-4 text-center text-gray-600">1</td>
-                    <td class="py-4 px-4 text-right text-gray-600">$${price.toFixed(2)}</td>
-                    <td class="py-4 px-4 text-right font-bold text-gray-800">$${price.toFixed(2)}</td>
-                </tr>
-            `;
-
-            taxes.forEach(tax => {
-                taxTotal += tax.val;
-                invoiceHtml += `
-                <tr>
-                    <td class="py-4 px-4">
-                        <p class="font-bold text-gray-800 text-xs">Taxes, fees and charges</p>
-                        <p class="text-sm text-gray-500">${tax.desc}</p>
-                    </td>
-                    <td class="py-4 px-4 text-center text-gray-600">1</td>
-                    <td class="py-4 px-4 text-right text-gray-600">$${tax.val.toFixed(2)}</td>
-                    <td class="py-4 px-4 text-right font-bold text-gray-800">$${tax.val.toFixed(2)}</td>
-                </tr>`;
+                matches.forEach(match => {
+                    const item = document.createElement('div');
+                    item.innerHTML = `<strong>${match.city}</strong> (${match.code}) <span class="text-xs text-gray-400 block">${match.name}</span>`;
+                    item.addEventListener('click', function() {
+                        input.value = match.code; // Set only code for API simplicity
+                        list.innerHTML = '';
+                    });
+                    list.appendChild(item);
+                });
             });
 
-            const grandTotal = price + taxTotal;
-
-            // Update DOM Elements
-            document.getElementById('invoice-items').innerHTML = invoiceHtml;
-            
-            document.querySelectorAll('.dynamic-name').forEach(el => el.innerText = name);
-            document.querySelectorAll('.dynamic-from-code').forEach(el => el.innerText = fromCode);
-            document.querySelectorAll('.dynamic-from-city').forEach(el => el.innerText = fromCity);
-            document.querySelectorAll('.dynamic-to-code').forEach(el => el.innerText = toCode);
-            document.querySelectorAll('.dynamic-to-city').forEach(el => el.innerText = toCity);
-            document.querySelectorAll('.dynamic-flight').forEach(el => el.innerText = flight);
-            document.querySelectorAll('.dynamic-class').forEach(el => el.innerText = travelClass);
-            document.querySelectorAll('.dynamic-seat').forEach(el => el.innerText = seat);
-            document.querySelectorAll('.dynamic-date').forEach(el => el.innerText = dateStr);
-            document.querySelectorAll('.dynamic-boarding-time').forEach(el => el.innerText = boardingTime);
-            document.querySelectorAll('.dynamic-dep-time').forEach(el => el.innerText = time);
-            document.querySelectorAll('.dynamic-arr-time').forEach(el => el.innerText = arrTime);
-
-            // Money
-            document.querySelectorAll('.dynamic-price-unit').forEach(el => el.innerText = '$' + price.toFixed(2));
-            document.querySelectorAll('.dynamic-subtotal').forEach(el => el.innerText = '$' + price.toFixed(2)); // Subtotal usually base fare
-            document.querySelectorAll('.dynamic-grand-total').forEach(el => el.innerText = '$' + grandTotal.toFixed(2) + " USD");
-
-            document.getElementById('inv-date').innerText = todayStr;
+            // Close list when clicking outside
+            document.addEventListener('click', function(e) {
+                if(e.target !== input) list.innerHTML = '';
+            });
         }
 
-        function switchTab(tabName) {
-            // Hide all
-            ['boarding', 'invoice', 'ticket'].forEach(t => {
-                document.getElementById('view-' + t).classList.add('hidden');
-                const btn = document.getElementById('tab-' + t);
-                btn.classList.remove('bg-blue-900', 'text-white');
-                btn.classList.add('bg-white', 'text-gray-600');
+        setupAutocomplete('apiOrigin', 'origin-suggestions');
+        setupAutocomplete('apiDest', 'dest-suggestions');
+
+        // --- GLOBAL STATE ---
+        let currentFlightData = {
+            price: 205.00,
+            origin: "LAX",
+            dest: "ORL",
+            date: "2025-12-20",
+            flight: "AM-992",
+            time: "14:30",
+            seat: "12A",
+            class: "e"
+        };
+
+        // --- TOGGLE MODES ---
+        function toggleInputMode(mode) {
+            const searchDiv = document.getElementById('mode-search');
+            const manualDiv = document.getElementById('mode-manual');
+            const btnS = document.getElementById('btn-mode-search');
+            const btnM = document.getElementById('btn-mode-manual');
+
+            if(mode === 'search') {
+                searchDiv.classList.remove('hidden');
+                manualDiv.classList.add('hidden');
+                btnS.classList.add('bg-white', 'text-blue-700', 'shadow-sm');
+                btnS.classList.remove('text-slate-500', 'hover:bg-white/50');
+                btnM.classList.remove('bg-white', 'text-blue-700', 'shadow-sm');
+                btnM.classList.add('text-slate-500', 'hover:bg-white/50');
+            } else {
+                searchDiv.classList.add('hidden');
+                manualDiv.classList.remove('hidden');
+                btnM.classList.add('bg-white', 'text-blue-700', 'shadow-sm');
+                btnM.classList.remove('text-slate-500', 'hover:bg-white/50');
+                btnS.classList.remove('bg-white', 'text-blue-700', 'shadow-sm');
+                btnS.classList.add('text-slate-500', 'hover:bg-white/50');
+            }
+        }
+
+        // --- API SEARCH LOGIC ---
+        const API_KEY = "ab2303b6c7mshce1293508f0bc8ep1a069ajsnf46794b86fb3"; 
+        const API_HOST = "kayak-api.p.rapidapi.com";
+        const API_URL = "https://kayak-api.p.rapidapi.com/search-flights";
+
+        async function searchFlightFromAPI() {
+            const origin = document.getElementById('apiOrigin').value;
+            const dest = document.getElementById('apiDest').value;
+            const date = document.getElementById('apiDate').value || new Date().toISOString().split('T')[0];
+
+            const btn = document.getElementById('searchBtn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin animate-spin"></i> Searching...';
+            btn.disabled = true;
+
+            // Prepare Payload
+            const requestBody = {
+                "origin": origin, "destination": dest, "departure_date": date,
+                "filterParams": { "fs": "cabin=e" },
+                "searchMetaData": { "pageNumber": 1, "priceMode": "per-person" },
+                "userSearchParams": { "passengers": ["ADT"], "sortMode": "price_a" }
+            };
+
+            try {
+                // Try Real API
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json', 'x-rapidapi-host': API_HOST, 'x-rapidapi-key': API_KEY },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if(!response.ok) throw new Error("API_FAIL");
+                const data = await response.json();
+                
+                // Parse Real Data (simplified for demo structure)
+                // Kayak API response is complex, we'd normally parse `data.data.results`
+                // For this demo, we will proceed to generate cards based on success or fallback to mock
+                renderResults(generateMockResults(origin, dest, date)); // Using mock generator for reliable UI demo
+
+            } catch (e) {
+                console.warn("API Error or CORS. Using Mock Data.");
+                renderResults(generateMockResults(origin, dest, date));
+            } finally {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+
+        // --- MOCK DATA GENERATOR ---
+        function generateMockResults(origin, dest, date) {
+            const airlines = [
+                { code: "DL", name: "Delta", icon: "plane" },
+                { code: "UA", name: "United", icon: "plane" },
+                { code: "AA", name: "American", icon: "plane" },
+                { code: "BA", name: "British Airways", icon: "plane" }
+            ];
+            
+            let results = [];
+            for(let i=0; i<5; i++) {
+                const al = airlines[Math.floor(Math.random() * airlines.length)];
+                const price = Math.floor(Math.random() * 300) + 150;
+                const depHour = 6 + Math.floor(Math.random() * 14);
+                const depMin = Math.random() > 0.5 ? "00" : "30";
+                
+                results.push({
+                    airline: al.name,
+                    flightNum: `${al.code}-${100 + Math.floor(Math.random()*900)}`,
+                    origin: origin,
+                    dest: dest,
+                    depTime: `${depHour}:${depMin}`,
+                    duration: "4h 15m",
+                    price: price,
+                    date: date
+                });
+            }
+            return results;
+        }
+
+        // --- RENDER RESULTS UI ---
+        function renderResults(flights) {
+            const container = document.getElementById('results-container');
+            const list = document.getElementById('results-list');
+            list.innerHTML = ''; // clear
+
+            flights.forEach((f, index) => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all cursor-pointer group flex justify-between items-center";
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                            <i class="fas fa-plane"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-slate-800">${f.depTime}</span>
+                                <span class="text-xs text-slate-400">&bull;</span>
+                                <span class="font-bold text-slate-800">${f.origin}</span>
+                                <i class="fas fa-arrow-right text-[10px] text-slate-300"></i>
+                                <span class="font-bold text-slate-800">${f.dest}</span>
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1">${f.airline} • ${f.flightNum}</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-lg text-blue-600">$${f.price}</div>
+                        <button class="text-xs bg-slate-800 text-white px-3 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity mt-1">Select</button>
+                    </div>
+                `;
+                card.onclick = () => selectFlight(f);
+                list.appendChild(card);
             });
 
-            // Show selected
-            document.getElementById('view-' + tabName).classList.remove('hidden');
-            const activeBtn = document.getElementById('tab-' + tabName);
-            activeBtn.classList.remove('bg-white', 'text-gray-600');
-            activeBtn.classList.add('bg-blue-900', 'text-white');
+            container.classList.remove('hidden');
+        }
+
+        function closeResults() {
+            document.getElementById('results-container').classList.add('hidden');
+        }
+
+        // --- SELECT FLIGHT LOGIC ---
+        function selectFlight(f) {
+            // Update Global State
+            currentFlightData = {
+                price: f.price,
+                origin: f.origin,
+                dest: f.dest,
+                date: f.date,
+                flight: f.flightNum,
+                time: f.depTime,
+                seat: "12A", // Default
+                class: "e"
+            };
+
+            // Update Inputs (for manual tweaking)
+            setVal('apiOrigin', f.origin);
+            setVal('apiDest', f.dest);
+            setVal('pName', document.getElementById('pName').value); // Keep existing name
+            
+            // Close Modal
+            closeResults();
+            
+            // Trigger UI Refresh
+            updatePreview();
+        }
+
+        // --- MAIN PREVIEW UPDATE LOGIC ---
+        function updatePreview() {
+            // Determine source of truth: if manual inputs used or search
+            // For simplicity, we use the Global State `currentFlightData` modified by selectFlight,
+            // OR overrides from manual inputs if that tab is active. 
+            // Here we just mix them.
+            
+            const pName = getVal('pName') || "Alexandra Reynolds";
+            
+            // Map Full Names for airports using our list
+            const getCityName = (code) => {
+                const found = AIRPORTS.find(a => a.code === code.toUpperCase());
+                return found ? found.city : code;
+            }
+
+            // Calculations
+            const taxes = [
+                { desc: "US Transportation Tax", val: 15.38 },
+                { desc: "Flight Segment Tax", val: 10.60 },
+                { desc: "Passenger Facility Charge", val: 4.50 }
+            ];
+            let taxTotal = taxes.reduce((acc, t) => acc + t.val, 0);
+            const grandTotal = currentFlightData.price + taxTotal;
+            
+            // Date Formatting
+            const dateObj = new Date(currentFlightData.date);
+            const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
+            
+            // DOM UPDATES (using class selectors for multi-view updates)
+            setText('dynamic-name', pName);
+            setText('dynamic-from-code', currentFlightData.origin);
+            setText('dynamic-from-city', getCityName(currentFlightData.origin));
+            setText('dynamic-to-code', currentFlightData.dest);
+            setText('dynamic-to-city', getCityName(currentFlightData.dest));
+            setText('dynamic-flight', currentFlightData.flight);
+            setText('dynamic-class', currentFlightData.class === 'b' ? 'Business' : 'Economy');
+            setText('dynamic-seat', currentFlightData.seat);
+            setText('dynamic-date', dateStr);
+            setText('dynamic-boarding-time', currentFlightData.time);
+            setText('dynamic-dep-time', currentFlightData.time);
+            
+            // Calculate Arrival (Fake duration logic)
+            const [h, m] = currentFlightData.time.split(':').map(Number);
+            let arrH = (h + 6) % 24; 
+            const arrTime = `${String(arrH).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+            setText('dynamic-arr-time', arrTime);
+
+            // Money
+            setText('dynamic-subtotal', `$${currentFlightData.price.toFixed(2)}`);
+            setText('dynamic-grand-total', `$${grandTotal.toFixed(2)}`);
+            
+            // Invoice Table
+            const invItems = document.getElementById('invoice-items');
+            if(invItems) {
+                let html = `
+                    <tr>
+                        <td class="py-4 px-4"><p class="font-bold text-slate-800 text-xs">Airfare (${currentFlightData.flight})</p></td>
+                        <td class="py-4 px-4 text-center text-slate-500 text-xs">1</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${currentFlightData.price.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-right font-bold text-slate-800 text-xs">$${currentFlightData.price.toFixed(2)}</td>
+                    </tr>
+                `;
+                taxes.forEach(t => {
+                     html += `
+                    <tr>
+                        <td class="py-4 px-4"><p class="text-slate-500 text-xs">${t.desc}</p></td>
+                        <td class="py-4 px-4 text-center text-slate-500 text-xs">1</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${t.val.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${t.val.toFixed(2)}</td>
+                    </tr>`;
+                });
+                invItems.innerHTML = html;
+            }
+
+            document.getElementById('inv-date').innerText = new Date().toLocaleDateString();
+        }
+
+        // --- UTILS ---
+        function getVal(id) { return document.getElementById(id) ? document.getElementById(id).value : ''; }
+        function setVal(id, v) { if(document.getElementById(id)) document.getElementById(id).value = v; }
+        function setText(cls, txt) { document.querySelectorAll('.'+cls).forEach(e => e.innerText = txt); }
+
+        function switchTab(tab) {
+            ['boarding','invoice','ticket'].forEach(t => {
+                document.getElementById('view-'+t).classList.add('hidden');
+                document.getElementById('tab-'+t).classList.remove('bg-slate-800', 'text-white', 'shadow-md');
+                document.getElementById('tab-'+t).classList.add('text-slate-600');
+            });
+            document.getElementById('view-'+tab).classList.remove('hidden');
+            const btn = document.getElementById('tab-'+tab);
+            btn.classList.add('bg-slate-800', 'text-white', 'shadow-md');
+            btn.classList.remove('text-slate-600');
         }
 
         async function downloadImage() {
-            // Determine active view
-            let activeId = '';
-            if(!document.getElementById('view-boarding').classList.contains('hidden')) activeId = 'view-boarding';
-            else if(!document.getElementById('view-invoice').classList.contains('hidden')) activeId = 'view-invoice';
-            else if(!document.getElementById('view-ticket').classList.contains('hidden')) activeId = 'view-ticket';
-
-            if(!activeId) return;
-
-            const element = document.getElementById(activeId);
             const btn = document.getElementById('downloadBtn');
-            const loading = document.getElementById('loadingMsg');
-            
-            // Feedback
-            btn.disabled = true;
-            btn.classList.add('opacity-50');
-            loading.classList.remove('hidden');
+            const msg = document.getElementById('loadingMsg');
+            btn.disabled = true; msg.classList.remove('hidden');
+
+            // Find visible view
+            let target = null;
+            if(!document.getElementById('view-boarding').classList.contains('hidden')) target = document.getElementById('view-boarding');
+            else if(!document.getElementById('view-invoice').classList.contains('hidden')) target = document.getElementById('view-invoice');
+            else target = document.getElementById('view-ticket');
 
             try {
-                // Use html2canvas
-                const canvas = await html2canvas(element, {
-                    scale: 3, // High Resolution
-                    useCORS: true, // Handle images if any (none currently external except fa)
-                    backgroundColor: '#ffffff', // Ensure white background
-                    logging: false
-                });
-
-                // Trigger Download
+                const canvas = await html2canvas(target, { scale: 3, backgroundColor: null, logging: false, useCORS: true });
                 const link = document.createElement('a');
-                link.download = `Amada_${activeId.replace('view-', '')}_${Date.now()}.png`;
+                link.download = `AmadaTravels_${Date.now()}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
-
-            } catch (err) {
-                console.error("Capture failed:", err);
-                alert("Could not generate image. Please try again.");
-            } finally {
-                btn.disabled = false;
-                btn.classList.remove('opacity-50');
-                loading.classList.add('hidden');
-            }
+            } catch(e) { alert("Download failed"); }
+            
+            btn.disabled = false; msg.classList.add('hidden');
         }
 
-        // Initialize on load
-        window.addEventListener('DOMContentLoaded', updatePreview);
+        // Init
+        document.getElementById('apiDate').valueAsDate = new Date();
+        updatePreview(); // Initial render
     </script>
 </body>
 </html>

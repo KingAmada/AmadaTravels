@@ -587,7 +587,7 @@
 
         // --- GLOBAL STATE ---
         let currentFlightData = {
-            price: 205.00,
+            price: 204.00,
             origin: "LAX",
             dest: "ORL",
             date: "2025-12-20",
@@ -783,9 +783,10 @@
 
             // Calculations
             const taxes = [
-                { desc: "CA Transportation Tax", val: 15.38 },
-                { desc: "Flight Segment Tax", val: 10.60 },
-                { desc: "Passenger Facility Charge", val: 4.50 }
+                { desc: "Transportation International/Domestic Tax - United States", val: currentFlightData.price * 0.075 },
+                { desc: "Harmonized Sales Tax - Canada - 100092287 RT0001", val: currentFlightData.price * 0.13 },
+                { desc: "Airport Improvement Fee Deposit - Canada", val: 28.70 },
+                { desc: "Flight Segment Tax - United States", val: 10.60 }
             ];
             let taxTotal = taxes.reduce((acc, t) => acc + t.val, 0);
             const grandTotal = currentFlightData.price + taxTotal;

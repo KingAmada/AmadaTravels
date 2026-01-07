@@ -202,9 +202,15 @@
 
             <!-- MANUAL MODE (Hidden by default) -->
             <div id="mode-manual" class="space-y-4 hidden animate-fade-in">
+                <!-- Dynamic Passenger List -->
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 pl-1">Passenger Name</label>
-                    <input type="text" id="pName" class="glass-input w-full px-3 py-2.5 rounded-xl text-sm font-semibold" value="ALEXANDRA REYNOLDS">
+                    <div class="flex justify-between items-center mb-1 pl-1">
+                         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Passengers</label>
+                         <button onclick="addPassengerInput()" class="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors bg-blue-50 px-2 py-0.5 rounded-full">+ Add Traveler</button>
+                    </div>
+                    <div id="passenger-container" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        <!-- Inputs injected via JS -->
+                    </div>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-3">
@@ -507,9 +513,12 @@
                         </div>
                         
                         <div class="space-y-4">
-                            <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                                <span class="text-xs font-bold text-slate-500 uppercase">Passenger</span>
-                                <span class="text-sm font-bold text-slate-800 dynamic-name">Alexandra</span>
+                            <div class="flex justify-between items-start p-3 bg-slate-50 rounded-lg">
+                                <span class="text-xs font-bold text-slate-500 uppercase mt-0.5">Passengers</span>
+                                <div class="text-right">
+                                     <span class="text-sm font-bold text-slate-800 block dynamic-name">Alexandra</span>
+                                     <!-- Additional names injected via JS if any -->
+                                </div>
                             </div>
                             <div class="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
                                 <span class="text-xs font-bold text-slate-500 uppercase">Flight / Seat</span>
@@ -602,6 +611,36 @@
             seat: "12A",
             class: "e"
         };
+        
+        // --- PASSENGER MANAGEMENT ---
+        function addPassengerInput(value = '') {
+            const container = document.getElementById('passenger-container');
+            const count = container.children.length;
+            const div = document.createElement('div');
+            div.className = 'flex gap-2 animate-fade-in';
+            div.innerHTML = `
+                <input type="text" class="glass-input w-full px-3 py-2 rounded-xl text-sm font-semibold passenger-input" 
+                       placeholder="Passenger Name" value="${value || (count === 0 ? 'ALEXANDRA REYNOLDS' : '')}">
+                ${count > 0 ? `<button onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-600 px-2"><i class="fas fa-times"></i></button>` : ''}
+            `;
+            container.appendChild(div);
+        }
+        
+        function getPassengerNames() {
+            const inputs = document.querySelectorAll('.passenger-input');
+            const names = Array.from(inputs).map(i => i.value).filter(v => v.trim() !== '');
+            return names.length > 0 ? names : ['ALEXANDRA REYNOLDS'];
+        }
+
+        // Initialize with one passenger
+        window.addEventListener('DOMContentLoaded', () => {
+             if(document.getElementById('passenger-container').children.length === 0) {
+                 addPassengerInput();
+             }
+             document.getElementById('apiDate').valueAsDate = new Date();
+             updatePreview();
+        });
+
 
         // --- TOGGLE MODES ---
         function toggleInputMode(mode) {
@@ -763,7 +802,6 @@
             // Update Inputs (for manual tweaking)
             setVal('apiOrigin', f.origin);
             setVal('apiDest', f.dest);
-            setVal('pName', document.getElementById('pName').value); // Keep existing name
             
             // Sync manual fields as well
             setVal('flightNum', f.flightNum);
@@ -791,7 +829,10 @@
                 if (!isNaN(mPrice)) currentFlightData.price = mPrice;
             }
             
-            const pName = getVal('pName') || "Alexandra Reynolds";
+            // Get Passengers
+            const passengers = getPassengerNames();
+            const primaryName = passengers[0];
+            const paxCount = passengers.length;
             
             // Map Full Names for airports using our list
             const getCityName = (code) => {
@@ -800,21 +841,50 @@
             }
 
             // Calculations
+            // NOTE: Taxes scale with price, fees are fixed per passenger usually.
+            // For simplicity based on previous prompt:
+            // % Taxes are calculated on base fare.
+            // Fixed fees are per ticket.
+            // We multiply EVERYTHING by paxCount for the invoice total.
+            
             const taxes = [
                 { desc: "Transportation International/Domestic Tax - United States", val: currentFlightData.price * 0.075 },
                 { desc: "Harmonized Sales Tax - Canada - 100092287 RT0001", val: currentFlightData.price * 0.13 },
                 { desc: "Airport Improvement Fee Deposit - Canada", val: 28.70 },
                 { desc: "Flight Segment Tax - United States", val: 10.60 }
             ];
-            let taxTotal = taxes.reduce((acc, t) => acc + t.val, 0);
-            const grandTotal = currentFlightData.price + taxTotal;
+            
+            let singleTaxTotal = taxes.reduce((acc, t) => acc + t.val, 0);
+            const singleGrandTotal = currentFlightData.price + singleTaxTotal;
+            const totalDue = singleGrandTotal * paxCount;
             
             // Date Formatting
             const dateObj = new Date(currentFlightData.date);
             const dateStr = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).toUpperCase();
             
             // DOM UPDATES (using class selectors for multi-view updates)
-            setText('dynamic-name', pName);
+            
+            // Update Name Fields
+            // For Boarding Pass & Bill To (Primary Only)
+            document.querySelectorAll('.dynamic-name').forEach(el => {
+                // For ticket view specifically, we might want list
+                if(el.parentElement.parentElement.classList.contains('bg-slate-50')) {
+                    // This is the ticket view name container, handle separately below
+                } else {
+                    el.innerText = primaryName;
+                }
+            });
+            
+            // Update Ticket View Names
+            const ticketNameContainer = document.querySelector('#view-ticket .dynamic-name').parentElement;
+            let nameHtml = `<span class="text-sm font-bold text-slate-800 block dynamic-name">${primaryName}</span>`;
+            if(paxCount > 1) {
+                for(let i=1; i<paxCount; i++) {
+                    nameHtml += `<span class="text-xs text-slate-500 block border-t border-slate-100 pt-1 mt-1">${passengers[i]}</span>`;
+                }
+            }
+            ticketNameContainer.innerHTML = nameHtml;
+
             setText('dynamic-from-code', currentFlightData.origin);
             setText('dynamic-from-city', getCityName(currentFlightData.origin));
             setText('dynamic-to-code', currentFlightData.dest);
@@ -833,8 +903,8 @@
             setText('dynamic-arr-time', arrTime);
 
             // Money
-            setText('dynamic-subtotal', `$${currentFlightData.price.toFixed(2)}`);
-            setText('dynamic-grand-total', `$${grandTotal.toFixed(2)}`);
+            setText('dynamic-subtotal', `$${(currentFlightData.price * paxCount).toFixed(2)}`);
+            setText('dynamic-grand-total', `$${totalDue.toFixed(2)}`);
             
             // Invoice Table
             const invItems = document.getElementById('invoice-items');
@@ -842,18 +912,18 @@
                 let html = `
                     <tr>
                         <td class="py-4 px-4"><p class="font-bold text-slate-800 text-xs">Airfare (${currentFlightData.flight})</p></td>
-                        <td class="py-4 px-4 text-center text-slate-500 text-xs">1</td>
+                        <td class="py-4 px-4 text-center text-slate-500 text-xs">${paxCount}</td>
                         <td class="py-4 px-4 text-right text-slate-500 text-xs">$${currentFlightData.price.toFixed(2)}</td>
-                        <td class="py-4 px-4 text-right font-bold text-slate-800 text-xs">$${currentFlightData.price.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-right font-bold text-slate-800 text-xs">$${(currentFlightData.price * paxCount).toFixed(2)}</td>
                     </tr>
                 `;
                 taxes.forEach(t => {
                      html += `
                     <tr>
                         <td class="py-4 px-4"><p class="text-slate-500 text-xs">${t.desc}</p></td>
-                        <td class="py-4 px-4 text-center text-slate-500 text-xs">1</td>
+                        <td class="py-4 px-4 text-center text-slate-500 text-xs">${paxCount}</td>
                         <td class="py-4 px-4 text-right text-slate-500 text-xs">$${t.val.toFixed(2)}</td>
-                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${t.val.toFixed(2)}</td>
+                        <td class="py-4 px-4 text-right text-slate-500 text-xs">$${(t.val * paxCount).toFixed(2)}</td>
                     </tr>`;
                 });
                 invItems.innerHTML = html;
@@ -900,10 +970,6 @@
             
             btn.disabled = false; msg.classList.add('hidden');
         }
-
-        // Init
-        document.getElementById('apiDate').valueAsDate = new Date();
-        updatePreview(); // Initial render
     </script>
 </body>
 </html>
